@@ -32,7 +32,7 @@ The system architecture follows a three-layer industrial model:
 ---
 
 ## 3. Technical Stack
-| Component | Technology | Why Industry Level? |
+| Component | Technology 
 | :--- | :--- | :--- |
 | **Hardware** | STM32F767ZI (Cortex-M7) | High-performance industrial MCU with Ethernet & FPU. |
 | **OS** | FreeRTOS | Global standard for deeply embedded multitasking. |
