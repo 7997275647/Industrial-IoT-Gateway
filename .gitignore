@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IoT/Embedded specific
+*.bin
+*.hex
+*.elf
+firmware/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Testing
+coverage/
+.pytest_cache/
+.coverage
+
+# IDE settings
+*.code-workspace
