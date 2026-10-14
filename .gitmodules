@@ -1,0 +1,3 @@
+[submodule "dashboard_application"]
+	path = dashboard_application
+	url = https://github.com/7997275647/CrossPlatform_IoT_Dashboard.git
