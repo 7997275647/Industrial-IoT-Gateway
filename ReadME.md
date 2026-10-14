@@ -1,81 +1,106 @@
-# Secure Industrial Edge-IoT Gateway
-### Platform: STM32F767ZI (Nucleo-144)
+# Industrial IoT Gateway
 
-## 1. Project Overview
-This project transforms a **Nucleo-F767ZI** into an industry-grade **Edge-IoT Gateway**. It is designed to bridge the gap between "Southbound" industrial data (simulated via internal SoC peripherals) and "Northbound" cloud analytics via **Secure MQTT over Ethernet**. 
+### Embedded systems and desktop telemetry prototype
 
-By leveraging the high-performance **ARM Cortex-M7** core (216 MHz), the gateway performs real-time data aggregation, JSON serialization, and secure encryption (TLS 1.2) entirely within an open-source toolchain.
+An STM32F767ZI firmware foundation paired with a Qt 6 temperature dashboard. The intended MQTT network has three members: the STM32 publisher, a broker service running on the PC, and the dashboard application as a separate subscriber client.
+
+![Qt temperature dashboard connected to an MQTT broker](dashboard_application/Documentation/gui.png)
+
+> **Project status:** The dashboard currently subscribes to an MQTT broker and renders temperature messages. The STM32 firmware is at the board bring-up stage and does not yet publish telemetry; the board-to-broker link is the next integration milestone.
+
+## At A Glance
+
+| Area | Current implementation |
+| --- | --- |
+| Target | STM32F767ZITx / NUCLEO-F767ZI |
+| Firmware | STM32 HAL, CMSIS-RTOS v2, FreeRTOS |
+| Peripherals | Ethernet RMII, USART3, USB OTG FS, GPIO |
+| Dashboard | C++17, Qt Quick, Qt MQTT |
+| Build systems | STM32CubeIDE and CMake |
+| Intended data path | STM32 Ethernet -> Wi-Fi router -> PC broker -> dashboard subscriber |
+| MQTT topic | `sensors/temperature` |
+
+## System Overview
+
+The target deployment has three MQTT members: the STM32 publisher, the broker service on the PC, and the Qt dashboard application as a separate subscriber. The STM32 uses wired Ethernet to connect to the Wi-Fi router; the PC reaches that router over Wi-Fi. The router carries the board's MQTT traffic to the broker on the PC. Both the STM32 and dashboard connect to the broker using the PC's Wi-Fi LAN IP address, not `localhost`.
+
+```mermaid
+flowchart LR
+	S[Temperature source - planned] -.-> P[STM32 MQTT publisher - planned]
+	R[Wi-Fi router]
+	B[PC MQTT broker]
+	Q[Dashboard application - Qt MQTT subscriber] --> D[Temperature display]
+	P -. Planned: wired Ethernet .-> R
+	R -->|Wi-Fi| B
+	Q -. Subscribe over network to topic .-> B
+	B -->|Forward matching readings| Q
+```
+
+### Firmware bring-up
+
+The STM32 application initializes the HAL and a 96 MHz system clock, configures the board peripherals, and starts two CMSIS-RTOS v2 threads. `Heartbeat_Task` toggles LD1 every 500 ms; `defaultTask` currently sleeps. USART3 is configured for 115200 baud, 8-N-1.
+
+The STM32 Ethernet MAC DMA descriptors and RMII pins are set up, but there is no IP stack or broker client in the current firmware. The sensor source and publish path in the diagram are planned work, not existing features. The STM32 connects to the router over Ethernet; it does not use Wi-Fi directly. Sensor acquisition, TLS, and watchdog recovery are also not implemented yet.
+
+### MQTT temperature dashboard
+
+The Qt Quick app is the third network member: a separate MQTT subscriber application at QoS 0. Enter the PC's Wi-Fi LAN IP address in the broker field, port `1883`, and topic `sensors/temperature`, then connect. The app displays numeric temperatures received as either a plain number (`29.5`) or a JSON object (`{"temperature":29.5}`). The broker address, port, and topic can be changed in the UI. The application no longer connects automatically on launch.
+
+The dashboard currently uses a default MQTT connection without credentials or TLS. Use it only with a trusted development broker/network.
+
+## Build And Run
+
+### STM32 firmware
+
+Requirements: STM32CubeIDE, an STM32F767ZI target (such as NUCLEO-F767ZI), and ST-LINK for flashing/debugging.
+
+1. Import the existing STM32 project from the repository root, or open `Industrial IoT Gateway.ioc` in STM32CubeIDE.
+2. Build the `Industrial IoT Gateway` project.
+3. Connect ST-LINK and start the included `Industrial IoT Gateway Debug.launch` configuration (or use the IDE's Run/Debug action).
+
+The checked-in CubeMX configuration identifies STM32Cube firmware package F7 v1.17.4. The firmware is an IDE-managed project; there is no root-level CMake or Make build.
+
+### Qt dashboard
+
+Requirements: Qt 6.8+ with Qt Quick and Qt MQTT, CMake 3.16+, and an MQTT broker running on the laptop. From `dashboard_application/`:
+
+```sh
+cmake -S . -B build
+cmake --build build
+```
+
+Launch `build/appQtSensorDash` on Linux/macOS or `build/appQtSensorDash.exe` on Windows. If Qt is installed in a custom location, configure the Qt environment or pass `CMAKE_PREFIX_PATH` to CMake.
+
+Start Mosquitto on the PC with a listener reachable from the LAN. Enter the PC's Wi-Fi LAN IP address in the dashboard and connect. To test publishing from another LAN device, use the same broker address:
+
+```sh
+mosquitto_pub -h <PC_LAN_IP> -p 1883 -t sensors/temperature -m '23.5'
+```
+
+Replace `<PC_LAN_IP>` with the PC's actual Wi-Fi IPv4 address. The dashboard also accepts JSON: `{"temperature":23.5}`. Invalid payloads are ignored. Configure both the STM32 MQTT client and dashboard subscriber with this PC address. Configure the broker listener and PC firewall to accept connections from the router's LAN on port 1883, and ensure Wi-Fi client isolation is disabled so the wired STM32 can reach the PC.
+
+## Engineering Roadmap
+
+- Read a real or simulated temperature value on the MCU and validate it over UART.
+- Add an embedded IP stack and verify the board can reach the PC broker through the router.
+- Run the broker on the PC and publish firmware telemetry to its LAN address using the dashboard's topic and payload contract.
+- Add secure broker transport, reconnect behavior, watchdog supervision, and focused tests.
+
+## Repository Map
+
+| Path | Contents |
+| --- | --- |
+| `Core/` | Firmware application, peripheral setup, RTOS tasks, and interrupt handlers |
+| `Drivers/` | CMSIS and STM32F7 HAL |
+| `Middlewares/Third_Party/FreeRTOS/` | FreeRTOS kernel and CMSIS-RTOS v2 adapter |
+| `Industrial IoT Gateway.ioc` | CubeMX pin, clock, peripheral, and RTOS configuration |
+| `STM32F767ZITX_*.ld` | Flash and RAM linker scripts |
+| `dashboard_application/` | Qt dashboard, MQTT client, CMake project, and its [build notes](dashboard_application/README.md) |
+
+## Checks
+
+The dashboard CI workflow currently runs `qmllint`. Its build and unit-test steps are not enabled yet; no automated firmware tests are configured.
 
 ---
 
-## 2. Project Architecture
-
-
-
-The system architecture follows a three-layer industrial model:
-
-### A. Data Acquisition Layer (Internal Asset)
-* **Internal Temperature Sensor:** Samples the die temperature to monitor SoC health in industrial environments.
-* **Internal Voltage Reference ($V_{REFINT}$):** Monitors power supply stability to ensure system dependability.
-* **Virtual Asset Simulation:** Uses **TIMers** in PWM/Input Capture mode to simulate motor signals or RPM telemetry without requiring external hardware.
-
-### B. Edge Processing Layer (Middleware)
-* **FreeRTOS (CMSIS-v2):** Manages concurrent tasks for high-priority sensing, data processing, and network management.
-* **cJSON:** Formats raw sensor data into standardized JSON objects for enterprise cloud compatibility.
-* **IWDG (Independent Watchdog):** Ensures 24/7 system recovery in case of network stack or software hangs.
-
-### C. Communication Layer (Connectivity)
-* **LwIP (Lightweight IP):** Handles the TCP/IP stack via the onboard 10/100 Ethernet MAC/PHY.
-* **MbedTLS:** Provides a hardware-accelerated SSL/TLS 1.2 layer for end-to-end encrypted communication.
-* **MQTT:** A robust client-subscriber model for pushing telemetry to brokers like AWS IoT, HiveMQ, or Mosquitto.
-
----
-
-## 3. Technical Stack
-| Component | Technology 
-| :--- | :--- | :--- |
-| **Hardware** | STM32F767ZI (Cortex-M7) | High-performance industrial MCU with Ethernet & FPU. |
-| **OS** | FreeRTOS | Global standard for deeply embedded multitasking. |
-| **Network Stack** | LwIP | Most widely used open-source TCP/IP stack for MCUs. |
-| **Security** | MbedTLS (TLS 1.2) | Mandatory for secure industrial data transmission. |
-| **Data Format** | JSON via cJSON | Standard for modern IoT and Web-based analytics. |
-| **IDE** | STM32CubeIDE (GCC) | Professional-grade Eclipse-based development environment. |
-
----
-
-## 4. Key Features
-* **Zero-External-Hardware Requirement:** Utilizes internal STM32 peripherals to simulate a complete industrial environment.
-* **Edge Intelligence:** Implements "Deadbanding" logic only transmitting data to the cloud when values change beyond a specific threshold to optimize bandwidth.
-* **Production-Grade Security:** Full TLS handshake implementation with root CA certificate validation.
-* **Resilient Connectivity:** Automated state-machine for Ethernet link-down detection and MQTT reconnection.
-* **MISRA C Alignment:** Modular restructuring to ensure adherence to strict software engineering standards.
-
----
-
-## 5. Getting Started
-
-### Hardware Requirements
-* 1x **Nucleo-F767ZI** Board.
-* 1x **Ethernet Cable** (RJ45) connected to a router with internet access.
-* 1x **Micro-USB Cable** for power and ST-LINK debugging.
-
-### Software Setup
-1. **Import to STM32CubeIDE:** Open the project and ensure the `LwIP`, `FreeRTOS`, and `MbedTLS` middlewares are enabled in the `.ioc` file.
-2. **Configure Network:**
-   - **For DHCP:** Ensure `LWIP_DHCP` is set to 1 in LwIP configuration.
-   - **For Static IP:** Update `IP_ADDR0` to `IP_ADDR3` in `lwip.c` to match your local subnet.
-3. **MQTT Broker:** Update the `MQTT_BROKER_ADDR` in your configuration header to point to your target broker.
-4. **Build & Flash:** Connect the board and click **Run**.
-
----
-
-## 6. Implementation Roadmap
-- [ ] **Phase 1:** Initialize ADC/TIM for internal health monitoring and verify via UART.
-- [ ] **Phase 2:** Configure LwIP and verify network connectivity via Ping.
-- [ ] **Phase 3:** Implement MQTT client with JSON payload formatting.
-- [ ] **Phase 4:** Enable MbedTLS for secure cloud communication and integrate Watchdog protection.
-
----
-
-## 7. About the Author
 **Sandeep Reddy Modugu**
