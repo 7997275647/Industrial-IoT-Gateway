@@ -1,25 +1,5 @@
 # Industrial IoT Gateway
 
-### Embedded systems and desktop telemetry prototype
-
-An STM32F767ZI firmware foundation paired with a Qt 6 temperature dashboard. The intended MQTT network has three members: the STM32 publisher, a broker service running on the PC, and the dashboard application as a separate subscriber client.
-
-![Qt temperature dashboard connected to an MQTT broker](dashboard_application/Documentation/gui.png)
-
-> **Project status:** The dashboard currently subscribes to an MQTT broker and renders temperature messages. The STM32 firmware is at the board bring-up stage and does not yet publish telemetry; the board-to-broker link is the next integration milestone.
-
-## At A Glance
-
-| Area | Current implementation |
-| --- | --- |
-| Target | STM32F767ZITx / NUCLEO-F767ZI |
-| Firmware | STM32 HAL, CMSIS-RTOS v2, FreeRTOS |
-| Peripherals | Ethernet RMII, USART3, USB OTG FS, GPIO |
-| Dashboard | C++17, Qt Quick, Qt MQTT |
-| Build systems | STM32CubeIDE and CMake |
-| Intended data path | STM32 Ethernet -> Wi-Fi router -> PC broker -> dashboard subscriber |
-| MQTT topic | `sensors/temperature` |
-
 ## System Overview
 
 The target deployment has three MQTT members: the STM32 publisher, the broker service on the PC, and the Qt dashboard application as a separate subscriber. The STM32 uses wired Ethernet to connect to the Wi-Fi router; the PC reaches that router over Wi-Fi. The router carries the board's MQTT traffic to the broker on the PC. Both the STM32 and dashboard connect to the broker using the PC's Wi-Fi LAN IP address, not `localhost`.
@@ -35,6 +15,26 @@ flowchart LR
 	Q -. Subscribe over network to topic .-> B
 	B -->|Forward matching readings| Q
 ```
+
+### Embedded systems and desktop telemetry prototype
+
+An STM32F767ZI firmware foundation paired with a Qt 6 temperature dashboard. The intended MQTT network has three members: the STM32 publisher, a broker service running on the PC, and the dashboard application as a separate subscriber client.
+
+![Qt temperature dashboard connected to an MQTT broker](/Documentation/gui.png)
+
+> **Project status:** The dashboard currently subscribes to an MQTT broker and renders temperature messages. The STM32 firmware is at the board bring-up stage and does not yet publish telemetry; the board-to-broker link is the next integration milestone.
+
+## At A Glance
+
+| Area | Current implementation |
+| --- | --- |
+| Target | STM32F767ZITx / NUCLEO-F767ZI |
+| Firmware | STM32 HAL, CMSIS-RTOS v2, FreeRTOS |
+| Peripherals | Ethernet RMII, USART3, USB OTG FS, GPIO |
+| Dashboard | C++17, Qt Quick, Qt MQTT |
+| Build systems | STM32CubeIDE and CMake |
+| Intended data path | STM32 Ethernet -> Wi-Fi router -> PC broker -> dashboard subscriber |
+| MQTT topic | `sensors/temperature` |
 
 ### Firmware bring-up
 
