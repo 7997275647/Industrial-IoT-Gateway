@@ -6,21 +6,19 @@ The target deployment has three MQTT members: the STM32 publisher, the broker se
 
 ```mermaid
 flowchart LR
-	S[Temperature source - planned] -.-> P[STM32 MQTT publisher - planned]
-	R[Wi-Fi router]
+	S[Sensors] -.-> P[STM32 MQTT publisher]
 	B[PC MQTT broker]
-	Q[Dashboard application - Qt MQTT subscriber] --> D[Temperature display]
-	P -. Planned: wired Ethernet .-> R
-	R -->|Wi-Fi| B
-	Q -. Subscribe over network to topic .-> B
-	B -->|Forward matching readings| Q
+    P -. Publish the topics over network .-> B
+	Q[Dashboard application - Qt MQTT subscriber]
+	B -. Subscribe over network to topic .-> Q
 ```
 
 ### Embedded systems and desktop telemetry prototype
 
-An STM32F767ZI firmware foundation paired with a Qt 6 temperature dashboard. The intended MQTT network has three members: the STM32 publisher, a broker service running on the PC, and the dashboard application as a separate subscriber client.
+An STM32F767ZI firmware foundation paired with a Qt 6 Sensor dashboard. The intended MQTT network has three members: the STM32 publisher, a broker service running on the PC, and the dashboard application as a separate subscriber client.
 
-![Qt temperature dashboard connected to an MQTT broker](/Documentation/gui.png)
+![Qt Sensor dashboard connected to an MQTT broker](/Documentation/Gui1.png)
+![Qt Sensor dashboard connected to an MQTT broker](/Documentation/Gui2.png)
 
 > **Project status:** The dashboard currently subscribes to an MQTT broker and renders temperature messages. The STM32 firmware is at the board bring-up stage and does not yet publish telemetry; the board-to-broker link is the next integration milestone.
 
@@ -28,13 +26,13 @@ An STM32F767ZI firmware foundation paired with a Qt 6 temperature dashboard. The
 
 | Area | Current implementation |
 | --- | --- |
-| Target | STM32F767ZITx / NUCLEO-F767ZI |
+| Target | NUCLEO-F767ZI |
 | Firmware | STM32 HAL, CMSIS-RTOS v2, FreeRTOS |
 | Peripherals | Ethernet RMII, USART3, USB OTG FS, GPIO |
 | Dashboard | C++17, Qt Quick, Qt MQTT |
 | Build systems | STM32CubeIDE and CMake |
 | Intended data path | STM32 Ethernet -> Wi-Fi router -> PC broker -> dashboard subscriber |
-| MQTT topic | `sensors/temperature` |
+| MQTT topics | `sensors/temperature`, `sensors/humidity`, `sensors/gyro` |
 
 ### Firmware bring-up
 
